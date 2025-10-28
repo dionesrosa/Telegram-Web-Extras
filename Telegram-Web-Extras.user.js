@@ -1,15 +1,15 @@
 // ==UserScript==
 // @name         Telegram Web Extras
 // @namespace    https://github.com/dionesrosa
-// @version      1.2.2
+// @version      1.2.3
 // @description  Extras para Telegram Web: download de mídia, cores por duração, zoom e melhorias visuais.
 // @author       Diones Souza
 // @license      MIT
 // @icon         https://www.iconfinder.com/icons/3787425/download/png/4096
 // @homepageURL  https://github.com/dionesrosa/Telegram-Web-Extras
 // @supportURL   https://github.com/dionesrosa/Telegram-Web-Extras/issues
-// @updateURL    https://raw.githubusercontent.com/dionesrosa/Telegram-Web-Extras/master/App.js
-// @downloadURL  https://raw.githubusercontent.com/dionesrosa/Telegram-Web-Extras/master/App.js
+// @updateURL    https://raw.githubusercontent.com/dionesrosa/Telegram-Web-Extras/master/Telegram-Web-Extras.user.js
+// @downloadURL  https://raw.githubusercontent.com/dionesrosa/Telegram-Web-Extras/master/Telegram-Web-Extras.user.js
 // @match        *://web.telegram.org/*
 // @run-at       document-idle
 // @grant        unsafeWindow
