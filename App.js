@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Telegram Web Extras
 // @namespace    http://tampermonkey.net/
-// @version      1.0.0
+// @version      1.0.1
 // @description  Adiciona funcionalidades extras ao Telegram Web, incluindo a modificação de links e estilos CSS.
 // @author       Diones Souza
 // @match        *://web.telegram.org/*
