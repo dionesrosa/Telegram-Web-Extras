@@ -12,17 +12,49 @@
 (function() {
     'use strict';
 
+    // Função para determinar cor baseada na duração do vídeo
+    function getCorPorDuracao(tempo) {
+        // Converter tempo para segundos
+        let segundos = 0;
+        const partes = tempo.split(':');
+        
+        if (partes.length === 1) {
+            segundos = parseInt(partes[0]) || 0;
+        } else if (partes.length === 2) {
+            segundos = parseInt(partes[0]) * 60 + parseInt(partes[1]);
+        } else if (partes.length === 3) {
+            segundos = parseInt(partes[0]) * 3600 + parseInt(partes[1]) * 60 + parseInt(partes[2]);
+        }
+
+        // Definir cores baseadas na duração
+        if (segundos <= 30) return '#4CAF50';        // Verde - muito curto
+        if (segundos <= 300) return '#FF9800';       // Laranja - curto
+        if (segundos <= 900) return '#2196F3';       // Azul - médio
+        if (segundos <= 1800) return '#9C27B0';      // Roxo - longo
+        return '#F44336';                            // Vermelho - muito longo
+    }
+
     // Função para modificar o CSS da página
     function modificarCSS() {
+        // Modificar largura e posicionamento dos elementos
         document.querySelectorAll('.bubbles-inner').forEach(e => {
             e.style.setProperty('width', '100%', 'important');
             e.style.setProperty('margin-left', '25px', 'important');
         });
 
+        // Modificar video-time com cores baseadas na duração
         document.querySelectorAll('.video-time').forEach(e => {
-            e.style.setProperty('background-color', 'red', 'important');
+            const tempo = e.textContent.trim();
+            const cor = getCorPorDuracao(tempo);
+            
+            e.style.setProperty('background-color', cor, 'important');
+            e.style.setProperty('color', 'white', 'important');
+            e.style.setProperty('font-weight', 'bold', 'important');
+            e.style.setProperty('padding', '2px 6px', 'important');
+            e.style.setProperty('border-radius', '4px', 'important');
         });
 
+        // Aumenta o zoom das mídias ao clicar
         const midiaZoom = document.querySelectorAll('.media-viewer-whole');
         midiaZoom.forEach((elemento, index) => {
             const midia = elemento.querySelectorAll('.media-viewer-movers');
@@ -38,18 +70,18 @@
         });
     }
 
-
+    // Observador de mutações para detectar novos elementos adicionados ao DOM
     const observer = new MutationObserver(function (mutations) {
         mutations.forEach(function (mutation) {
             mutation.addedNodes.forEach(function (node) {
                 if (node.nodeType !== 1) return; // só elementos
 
-                // 👉 Remove o próprio .is-sponsored se for ele
+                // Remove o próprio .is-sponsored se for ele
                 if (node.classList.contains('is-sponsored')) {
                     node.remove();
                 }
 
-                // 👉 Remove filhos com .is-sponsored
+                // Remove filhos com .is-sponsored
                 const patrocinados = node.querySelectorAll?.('.is-sponsored');
                 patrocinados?.forEach(el => el.remove());
 
@@ -58,10 +90,12 @@
         });
     });
 
+    // Iniciar o observador
     observer.observe(document.body, {
         childList: true,
         subtree: true
     });
 
+    // Modificar CSS ao carregar a página
     document.addEventListener('DOMContentLoaded', modificarCSS);
 })();
