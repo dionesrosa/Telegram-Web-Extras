@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Telegram Web Extras
 // @namespace    http://tampermonkey.net/
-// @version      1.0.1
+// @version      1.1.0
 // @description  Adiciona funcionalidades extras ao Telegram Web, incluindo a modificação de links e estilos CSS.
 // @author       Diones Souza
 // @match        *://web.telegram.org/*
@@ -27,11 +27,11 @@
         }
 
         // Definir cores baseadas na duração
-        if (segundos <= 30) return '#4CAF50';        // Verde - muito curto
-        if (segundos <= 300) return '#FF9800';       // Laranja - curto
-        if (segundos <= 900) return '#2196F3';       // Azul - médio
-        if (segundos <= 1800) return '#9C27B0';      // Roxo - longo
-        return '#F44336';                            // Vermelho - muito longo
+        if (segundos <= 30) return '#4CAF50';        // Verde - muito curto - menor que 30 segundos
+        if (segundos <= 300) return '#2196F3';       // Azul - curto - entre 30 segundos e 5 minutos
+        if (segundos <= 900) return '#FF9800';       // Laranja - médio - entre 5 e 15 minutos
+        if (segundos <= 1800) return '#9C27B0';      // Roxo - longo - entre 15 e 30 minutos
+        return '#F44336';                            // Vermelho - muito longo - mais que 30 minutos
     }
 
     // Função para modificar o CSS da página
