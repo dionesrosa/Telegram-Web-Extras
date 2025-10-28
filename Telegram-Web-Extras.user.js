@@ -8,8 +8,8 @@
 // @icon         https://www.iconfinder.com/icons/3787425/download/png/4096
 // @homepageURL  https://github.com/dionesrosa/Telegram-Web-Extras
 // @supportURL   https://github.com/dionesrosa/Telegram-Web-Extras/issues
-// @updateURL    https://raw.githubusercontent.com/dionesrosa/Telegram-Web-Extras/master/Telegram-Web-Extras.user.js
-// @downloadURL  https://raw.githubusercontent.com/dionesrosa/Telegram-Web-Extras/master/Telegram-Web-Extras.user.js
+// @updateURL    https://cdn.jsdelivr.net/gh/dionesrosa/Telegram-Web-Extras@master/Telegram-Web-Extras.user.js
+// @downloadURL  https://cdn.jsdelivr.net/gh/dionesrosa/Telegram-Web-Extras@master/Telegram-Web-Extras.user.js
 // @match        *://web.telegram.org/*
 // @run-at       document-idle
 // @grant        unsafeWindow
@@ -22,6 +22,7 @@
 
     // --- Configurações / variáveis ---
     let midiaAtual = null, idPeerAtual = null;
+    let ultimaContagem = 0;
     const classesMidia = ['photo', 'audio', 'video', 'voice-message', 'media-round', 'grouped-item', 'document-container', 'sticker'];
 
     // --- Helpers ---
@@ -29,6 +30,89 @@
     const safeQueryAll = (sel, root = document) => { try { return Array.from(root.querySelectorAll(sel)); } catch (e) { return []; } };
 
     function logWarn(...args) { console.warn('[TG-Extras]', ...args); }
+
+    // --- Função para atualizar o texto do botão ---
+    function atualizarTextoBotaoDownload() {
+        const batchBtn = document.getElementById('batch-btn');
+        if (!batchBtn) return;
+
+        const countElement = document.querySelector('.selection-container-count span');
+        if (!countElement) return;
+
+        const texto = countElement.textContent || '';
+        const numero = parseInt(texto.match(/\d+/)?.[0] || '0');
+
+        // Só atualizar se a contagem mudou
+        if (numero === ultimaContagem) return;
+        ultimaContagem = numero;
+
+        let frase_download = "Baixar Mídia"; // Singular
+        if (numero > 1) {
+            frase_download = "Baixar Mídias"; // Plural
+        }
+
+        // Atualizar o texto do botão
+        const textoBtn = batchBtn.querySelector('.i18n');
+        if (textoBtn) {
+            textoBtn.textContent = frase_download;
+        }
+        batchBtn.title = frase_download;
+    }
+
+    // --- Observer específico para o contador de seleção ---
+    let observerContador = null;
+
+    function iniciarObserverContador() {
+        // Parar observer anterior se existir
+        if (observerContador) {
+            observerContador.disconnect();
+        }
+
+        const countElement = document.querySelector('.selection-container-count');
+        if (!countElement) return;
+
+        // Criar observer específico para mudanças no contador
+        observerContador = new MutationObserver((mutations) => {
+            for (const mutation of mutations) {
+                if (mutation.type === 'childList' || mutation.type === 'characterData') {
+                    atualizarTextoBotaoDownload();
+                    break;
+                }
+            }
+        });
+
+        // Observar mudanças no contador e em seus filhos
+        observerContador.observe(countElement, {
+            childList: true,
+            subtree: true,
+            characterData: true
+        });
+    }
+
+    // --- Função para obter dados da mensagem de forma mais confiável ---
+    function obterDadosMidia(elemento) {
+        try {
+            // Tentar encontrar o elemento mais próximo com data-mid
+            const elementoComMid = elemento.closest('[data-mid]');
+            if (!elementoComMid) return null;
+
+            // Verificar se é uma mídia
+            const isMidia = classesMidia.some(cls =>
+                elementoComMid.classList.contains(cls) ||
+                elementoComMid.querySelector(`.${cls}`)
+            );
+
+            if (!isMidia) return null;
+
+            return {
+                mid: elementoComMid.dataset.mid,
+                peerId: elementoComMid.dataset.peerId ||
+                        elementoComMid.closest('[data-peer-id]')?.dataset.peerId
+            };
+        } catch (err) {
+            return null;
+        }
+    }
 
     // --- Download de mídia (verifica disponibilidade das APIs internas) ---
     function baixarMidiaDaMensagem(msg) {
@@ -79,7 +163,7 @@
                         if (elementoBtn) {
                             elementoBtn.disabled = true;
                             elementoBtn.style.opacity = 0.6;
-                            if (textoBtn) textoBtn.textContent = '..' + (segundos + 1) + '..';
+                            if (textoBtn) textoBtn.textContent = (segundos + 1) + ' segundos';
                             if (iconeBtn) iconeBtn.textContent = '🕔';
                         }
                         baixarMidiaDaMensagem(msg);
@@ -92,7 +176,8 @@
                         if (elementoBtn) {
                             elementoBtn.disabled = false;
                             elementoBtn.style.opacity = 1;
-                            if (textoBtn) textoBtn.textContent = 'Baixar';
+                            // Restaurar texto baseado na seleção atual
+                            atualizarTextoBotaoDownload();
                             if (iconeBtn) iconeBtn.textContent = '💾';
                         }
                     }, (segundos + 0.2) * 1000);
@@ -168,7 +253,7 @@
         }
     }
 
-    // --- MutationObserver (mais seguro) ---
+    // --- MutationObserver principal ---
     const observer = new MutationObserver((mutations) => {
         for (const mutation of mutations) {
             for (const node of mutation.addedNodes) {
@@ -188,49 +273,103 @@
                 if (el.id === 'bubble-contextmenu') {
                     const containerBtn = el.querySelector('.btn-menu-item') || el.querySelector('.menu');
                     if (containerBtn) {
-                        const htmlBotao = '<div class="btn-menu-item rp-overflow" id="down-btn"><span class="mytgico btn-menu-item-icon" style="font-size: 16px;">💾</span><span class="i18n btn-menu-item-text">Baixar Mídia</span></div>';
-                        containerBtn.insertAdjacentHTML('beforebegin', htmlBotao);
-                        const downBtn = document.getElementById('down-btn');
-                        downBtn?.addEventListener('click', () => {
-                            if (idPeerAtual && midiaAtual) {
-                                baixarMidiaUnica(idPeerAtual, midiaAtual);
-                            } else {
-                                logWarn('IDs não definidos para download único (midiaAtual / idPeerAtual).');
-                            }
-                        });
+                        // Verificar se já existe o botão para evitar duplicação
+                        if (!document.getElementById('down-btn')) {
+                            const htmlBotao = '<div class="btn-menu-item rp-overflow" id="down-btn"><span class="mytgico btn-menu-item-icon" style="font-size: 16px;">💾</span><span class="i18n btn-menu-item-text">Baixar Mídia</span></div>';
+                            containerBtn.insertAdjacentHTML('beforebegin', htmlBotao);
+                            const downBtn = document.getElementById('down-btn');
+                            downBtn?.addEventListener('click', () => {
+                                if (idPeerAtual && midiaAtual) {
+                                    baixarMidiaUnica(idPeerAtual, midiaAtual);
+                                } else {
+                                    logWarn('IDs não definidos para download único. Clique com o botão direito diretamente na mídia.');
+                                }
+                            });
+                        }
                     }
                 }
 
                 // seleção (barra superior) - inserir botão de batch
                 if (el.classList && el.classList.contains('selection-wrapper')) {
+                    safeQueryAll('.selection-wrapper').forEach(e => {
+                        e.style.setProperty('width', 'auto', 'important');
+                    });
+
                     const left = el.querySelector('.selection-container-left');
                     if (left && !document.getElementById('batch-btn')) {
+                        // Criar o botão com texto inicial
                         const htmlBotaoLote = '&nbsp;&nbsp;<button class="btn-primary btn-transparent text-bold" id="batch-btn" title="Baixar Mídia"><span class="mytgico" style="padding-bottom: 2px;">💾</span>&nbsp;<span class="i18n">Baixar Mídia</span></button>';
                         left.insertAdjacentHTML('beforeend', htmlBotaoLote);
                         const b = document.getElementById('batch-btn');
                         b?.addEventListener('click', baixarMidiasSelecionadas);
+
+                        // Iniciar observer específico para o contador
+                        setTimeout(() => {
+                            iniciarObserverContador();
+                            atualizarTextoBotaoDownload(); // Atualizar imediatamente
+                        }, 50);
                     }
+                }
+            }
+        }
+
+        // Também verificar se o contador de seleção foi modificado
+        for (const mutation of mutations) {
+            if (mutation.type === 'childList' || mutation.type === 'characterData') {
+                const selectionWrapper = document.querySelector('.selection-wrapper');
+                if (selectionWrapper && selectionWrapper.contains(mutation.target)) {
+                    setTimeout(atualizarTextoBotaoDownload, 10);
                 }
             }
         }
     });
 
-    observer.observe(document.body, { childList: true, subtree: true });
+    observer.observe(document.body, {
+        childList: true,
+        subtree: true,
+        characterData: true
+    });
 
     // aplicar css inicial
     window.addEventListener('load', modificarCSS);
-    document.addEventListener('readystatechange', () => { if (document.readyState === 'complete') modificarCSS(); });
+    document.addEventListener('readystatechange', () => {
+        if (document.readyState === 'complete') modificarCSS();
+    });
 
-    // --- Context menu listener para pegar dados da mídia (mais confiável que mouseup) ---
+    // --- Context menu listener melhorado ---
     document.body.addEventListener('contextmenu', function (e) {
         try {
-            const elementoProximo = e.target.closest('[data-mid]');
-            if (elementoProximo && classesMidia.some(cls => elementoProximo.classList.contains(cls))) {
-                midiaAtual = elementoProximo.dataset.mid;
-                idPeerAtual = elementoProximo.dataset.peerId;
+            // Resetar as variáveis
+            midiaAtual = null;
+            idPeerAtual = null;
+
+            // Tentar obter dados da mídia de forma mais robusta
+            const dadosMidia = obterDadosMidia(e.target);
+            if (dadosMidia) {
+                midiaAtual = dadosMidia.mid;
+                idPeerAtual = dadosMidia.peerId;
+                console.log('[TG-Extras] Mídia detectada:', { mid: midiaAtual, peerId: idPeerAtual });
             }
-        } catch (err) { /* ignore */ }
+        } catch (err) {
+            console.warn('[TG-Extras] Erro ao detectar mídia no contextmenu:', err);
+        }
     });
+
+    // --- Clique direito alternativo para detectar mídia ---
+    document.body.addEventListener('mousedown', function (e) {
+        if (e.button === 2) { // Botão direito
+            try {
+                // Tentar obter dados da mídia de forma mais robusta
+                const dadosMidia = obterDadosMidia(e.target);
+                if (dadosMidia) {
+                    midiaAtual = dadosMidia.mid;
+                    idPeerAtual = dadosMidia.peerId;
+                }
+            } catch (err) {
+                // Ignorar erros
+            }
+        }
+    }, { passive: true });
 
     // --- Habilitar cópia (Ctrl/Cmd+C) de forma segura sem sobrescrever APIs ---
     function enableCopyFallback() {
