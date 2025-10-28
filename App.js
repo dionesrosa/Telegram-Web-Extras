@@ -19,6 +19,10 @@
             e.style.setProperty('margin-left', '25px', 'important');
         });
 
+        document.querySelectorAll('.video-time').forEach(e => {
+            e.style.setProperty('background-color', 'red', 'important');
+        });
+
         const midiaZoom = document.querySelectorAll('.media-viewer-whole');
         midiaZoom.forEach((elemento, index) => {
             const midia = elemento.querySelectorAll('.media-viewer-movers');
